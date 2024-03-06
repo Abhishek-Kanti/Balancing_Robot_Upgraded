@@ -1,7 +1,7 @@
 #include <Wire.h>                                            //Include the Wire.h library so we can communicate with the gyro
 
 int gyro_address = 0x68;                                     //MPU-6050 I2C address (0x68 or 0x69)
-int acc_calibration_value_x, acc_calibration_value_y;        //Enter the accelerometer calibration value
+int acc_calibration_value_x, acc_calibration_value_y, acc_calibration_value_z;        //Enter the accelerometer calibration value
 float acc_raw_x, acc_raw_y, acc_raw_z;
 float acc_x, acc_y, acc_z;
 
@@ -97,13 +97,15 @@ for(receive_counter = 0; receive_counter < 500; receive_counter++){         //Cr
     Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
     Wire.write(0x3B);                                                       //Start reading the Who_am_I register 75h
     Wire.endTransmission();                                                 //End the transmission
-    Wire.requestFrom(gyro_address, 4);                                      //Request 2 bytes from the Accel
+    Wire.requestFrom(gyro_address, 6);                                      //Request 2 bytes from the Accel
     acc_calibration_value_x += Wire.read()<<8|Wire.read();                  //Combine the two bytes to make one integer
     acc_calibration_value_y += Wire.read()<<8|Wire.read();                  //Combine the two bytes to make one integer
+    acc_calibration_value_z += Wire.read()<<8|Wire.read(); 
     delayMicroseconds(1850);                                                //Wait for 3700 microseconds to simulate the main program loop time
   }
   acc_calibration_value_x /= 500;                                      //Divide the total value by 500 to get the avarage gyro offset
   acc_calibration_value_y /= 500;    
+  acc_calibration_value_z /= 500; 
 
 //  Serial.println("");
 //  Serial.print("Calibration gyro_pitch = ");
@@ -121,29 +123,37 @@ for(receive_counter = 0; receive_counter < 500; receive_counter++){         //Cr
 
 void loop() {
   // put your main code here, to run repeatedly:
-//  Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
-//  Wire.write(0x3B);                                                       //Start reading the Who_am_I register 75h
-//  Wire.endTransmission();                                                 //End the transmission
-//  Wire.requestFrom(gyro_address, 6);                                      //Request 2 bytes from the Accel
-//  acc_raw_x = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
-//  acc_raw_y = Wire.read()<<8|Wire.read(); 
-//  acc_raw_z = Wire.read()<<8|Wire.read(); 
-//
-//  acc_x = acc_raw_x/8192.0;
-//  acc_y = acc_raw_y/8192.0;
-//  acc_z = acc_raw_z/8192.0;
+ Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
+ Wire.write(0x3B);                                                       //Start reading the Who_am_I register 75h
+ Wire.endTransmission();                                                 //End the transmission
+ Wire.requestFrom(gyro_address, 6);                                      //Request 2 bytes from the Accel
+ acc_raw_x = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
+ acc_raw_y = Wire.read()<<8|Wire.read(); 
+ acc_raw_z = Wire.read()<<8|Wire.read(); 
 
-  Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
-  Wire.write(0x3F);                                                       //Start reading the Who_am_I register 75h
-  Wire.endTransmission();                                                 //End the transmission
-  Wire.requestFrom(gyro_address, 2);                                      //Request 2 bytes from the Accel
-  acc_raw_x = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
+ acc_x = acc_raw_x/8192.0;
+ acc_y = acc_raw_y/8192.0;
+ acc_z = acc_raw_z/8192.0;
 
-  acc_x = acc_raw_x/8192.0;
+  // Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
+  // Wire.write(0x3F);                                                       //Start reading the Who_am_I register 75h
+  // Wire.endTransmission();                                                 //End the transmission
+  // Wire.requestFrom(gyro_address, 2);                                      //Request 2 bytes from the Accel
+  // acc_raw_z = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
 
-  Serial.print("accel_x = ");
-  Serial.println(acc_x);
- 
+  // acc_z = acc_raw_z/8192.0;
+
+  // Serial.print("accel_z = ");
+  // Serial.println(acc_z);
+  if(acc_z > 1) acc_z=1;
+  float acc_pitch = acos(acc_z)*57.29;
+
+  Serial.print(95);
+  Serial.print(",");
+  Serial.print(-95);
+  Serial.print(",");
+  Serial.println(acc_pitch);
+
 //  Serial.print("accel_x = ");
 //  Serial.print(acc_x);
 //  Serial.print(" | ");
@@ -153,5 +163,4 @@ void loop() {
 //  Serial.print("accel_z = ");
 //  Serial.println(acc_z);
 
-  
 }
