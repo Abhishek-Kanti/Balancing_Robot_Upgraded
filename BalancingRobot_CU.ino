@@ -1,9 +1,10 @@
 #include <Wire.h>                                            //Include the Wire.h library so we can communicate with the gyro
 
 int gyro_address = 0x68;                                     //MPU-6050 I2C address (0x68 or 0x69)
-int acc_calibration_value_x, acc_calibration_value_y, acc_calibration_value_z;        //Enter the accelerometer calibration value
+float acc_calibration_value_x, acc_calibration_value_y, acc_calibration_value_z;        //Enter the accelerometer calibration value
 float acc_raw_x, acc_raw_y, acc_raw_z;
 float acc_x, acc_y, acc_z;
+float acc_angle, calibration_angle;
 
 //Various settings
 float pid_p_gain = 15;                                       //Gain setting for the P-controller (15)
@@ -102,57 +103,86 @@ for(receive_counter = 0; receive_counter < 500; receive_counter++){         //Cr
     acc_calibration_value_y += Wire.read()<<8|Wire.read();                  //Combine the two bytes to make one integer
     acc_calibration_value_z += Wire.read()<<8|Wire.read(); 
     delayMicroseconds(1850);                                                //Wait for 3700 microseconds to simulate the main program loop time
+//    Serial.println(acc_calibration_value_z);
   }
-  acc_calibration_value_x /= 500;                                      //Divide the total value by 500 to get the avarage gyro offset
+  acc_calibration_value_x /= 500;                                           //Divide the total value by 500 to get the avarage gyro offset
   acc_calibration_value_y /= 500;    
   acc_calibration_value_z /= 500; 
 
+  acc_calibration_value_z = acc_calibration_value_z/8200.0;
+  calibration_angle = acos(acc_calibration_value_z)*57.29;
+//  Serial.print(calibration_angle);
+  
 //  Serial.println("");
 //  Serial.print("Calibration gyro_pitch = ");
-//  Serial.println(gyro_pitch_calibration_value);
-//  Serial.print("Calibration gyro_yaw = ");
-//  Serial.println(gyro_yaw_calibration_value);
-//  Serial.print("Calibration Accel_x = ");
-//  Serial.println(acc_calibration_value_x);
-//  Serial.print("Calibration Accel_y = ");
-//  Serial.println(acc_calibration_value_y);
+//  Serial.print(gyro_pitch_calibration_value);
+//  Serial.print(" | ");
+//  Serial.print("acc_calibration_value_z = ");
+//  Serial.println(acc_calibration_value_z);
 
-//  loop_timer = micros() + 4000;                                             //Set the loop_timer variable at the next end loop time
-
+  loop_timer = micros() + 4000;                                           //Set the loop_timer variable at the next end loop time
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
- Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
- Wire.write(0x3B);                                                       //Start reading the Who_am_I register 75h
- Wire.endTransmission();                                                 //End the transmission
- Wire.requestFrom(gyro_address, 6);                                      //Request 2 bytes from the Accel
- acc_raw_x = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
- acc_raw_y = Wire.read()<<8|Wire.read(); 
- acc_raw_z = Wire.read()<<8|Wire.read(); 
-
- acc_x = acc_raw_x/8192.0;
- acc_y = acc_raw_y/8192.0;
- acc_z = acc_raw_z/8192.0;
-
-  // Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
-  // Wire.write(0x3F);                                                       //Start reading the Who_am_I register 75h
-  // Wire.endTransmission();                                                 //End the transmission
-  // Wire.requestFrom(gyro_address, 2);                                      //Request 2 bytes from the Accel
-  // acc_raw_z = Wire.read()<<8|Wire.read();                                //Combine the two bytes to make one integer
-
-  // acc_z = acc_raw_z/8192.0;
-
-  // Serial.print("accel_z = ");
-  // Serial.println(acc_z);
+  //put your main code here, to run repeatedly:
+  Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
+  Wire.write(0x3B);                                                       //Start reading the Who_am_I register 75h
+  Wire.endTransmission();                                                 //End the transmission
+  Wire.requestFrom(gyro_address, 6);                                      //Request 2 bytes from the Accel
+  acc_raw_x = Wire.read()<<8|Wire.read();                                 //Combine the two bytes to make one integer
+  acc_raw_y = Wire.read()<<8|Wire.read(); 
+  acc_raw_z = Wire.read()<<8|Wire.read(); 
+  
+  acc_x = acc_raw_x/8192.0;
+  acc_y = acc_raw_y/8192.0;
+  acc_z = acc_raw_z/8200.0;
+    
   if(acc_z > 1) acc_z=1;
-  float acc_pitch = acos(acc_z)*57.29;
+  if(acc_z < -1) acc_z=-1;
+  acc_angle = (acos(acc_z)*57.29) - calibration_angle;
+
+//  Wire.beginTransmission(gyro_address);                                   //Start communication with the Accel
+//  Wire.write(0x3F);                                                       //Start reading the Who_am_I register 75h
+//  Wire.endTransmission();                                                 //End the transmission
+//  Wire.requestFrom(gyro_address, 2);                                      //Request 2 bytes from the Accel
+//  acc_raw_z = Wire.read()<<8|Wire.read();                                 //Combine the two bytes to make one integer
+//  acc_raw_z += acc_calibration_value_z;
+//  
+//  if(acc_raw_z > 8200) acc_raw_z = 8200;                                  // acc_z = acc_raw_z/8192.0; (approximating 8192 to 8200)
+//  if(acc_raw_z < -8200) acc_raw_z = -8200;
+//
+//  acc_angle = asin((float)acc_raw_z/8200.0)*57.296;
+
+
+  Wire.beginTransmission(gyro_address);                                   //Start communication with the gyro
+  Wire.write(0x43);                                                       //Start reading the Who_am_I register 75h
+  Wire.endTransmission();                                                 //End the transmission
+  Wire.requestFrom(gyro_address, 4);                                      //Request 2 bytes from the gyro
+  gyro_yaw_data_raw = Wire.read()<<8|Wire.read();                         //Combine the two bytes to make one integer
+  gyro_pitch_data_raw = Wire.read()<<8|Wire.read();                       //Combine the two bytes to make one integer
+
+  gyro_pitch_data_raw -= gyro_pitch_calibration_value;
+  angle_gyro += -(gyro_pitch_data_raw * 0.000121);
+
+  angle_gyro =  angle_gyro*0.998 + acc_angle*0.002;
+
+  pid_error_temp = angle_gyro - self_balance_pid_setpoint - pid_setpoint;
+  if(pid_output > 10 || pid_output < -10)pid_error_temp += pid_output * 0.015;
+
+  pid_i_mem += pid_error_temp*pid_i_gain;
+
+  pid_output = pid_p_gain*(pid_error_temp) + pid_i_mem + pid_d_gain*(pid_error_temp - pid_last_d_error) 
+
+  pid_last_d_error = pid_error_temp;
+  
+//  Serial.print("accel_angle = ");
+//  Serial.println(acc_angle);
 
   Serial.print(95);
   Serial.print(",");
   Serial.print(-95);
   Serial.print(",");
-  Serial.println(acc_pitch);
+  Serial.println(angle_gyro);
 
 //  Serial.print("accel_x = ");
 //  Serial.print(acc_x);
@@ -163,4 +193,6 @@ void loop() {
 //  Serial.print("accel_z = ");
 //  Serial.println(acc_z);
 
+  while(loop_timer > micros());
+  loop_timer += 4000;
 }
