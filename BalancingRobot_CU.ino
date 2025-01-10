@@ -7,9 +7,9 @@ float acc_x, acc_y, acc_z;
 float acc_angle, calibration_angle;
 
 //Various settings
-float pid_p_gain = 15;                                       //Gain setting for the P-controller (15)
+float pid_p_gain = 8;                                       //Gain setting for the P-controller (15)
 float pid_i_gain = 1.5;                                      //Gain setting for the I-controller (1.5)
-float pid_d_gain = 30;                                       //Gain setting for the D-controller (30)
+float pid_d_gain = 3;                                       //Gain setting for the D-controller (30)
 float turning_speed = 30;                                    //Turning speed (20)
 float max_target_speed = 150;                                //Max target speed (100)
 
@@ -71,10 +71,10 @@ void setup(){
   Wire.endTransmission();                                                   //End the transmission with the gyro 
 
   pinMode(2, OUTPUT);                                                       //Configure digital port 2 as output
-  pinMode(5, OUTPUT);                                                       //Configure digital port 5 as output
-  pinMode(3, OUTPUT);                                                       //Configure digital port 3 as output
-  pinMode(6, OUTPUT);                                                       //Configure digital port 6 as output
-  pinMode(13, OUTPUT);                                                      //Configure digital port 13 as output
+  pinMode(5, OUTPUT);                                                       //Configure digital port 3 as output
+  pinMode(3, OUTPUT);                                                       //Configure digital port 4 as output
+  pinMode(6, OUTPUT);                                                       //Configure digital port 5 as output
+  pinMode(13, OUTPUT);                                                      //Configure digital port 6 as output
 
 //  Serial.print("Calibrating gyro...");
 
@@ -133,7 +133,7 @@ void loop() {
   
   acc_x = acc_raw_x/8192.0;
   acc_y = acc_raw_y/8192.0;
-  acc_z = acc_raw_z/8200.0;
+  acc_z = acc_raw_z/8192.0;
     
   if(acc_z > 1) acc_z=1;
   if(acc_z < -1) acc_z=-1;
@@ -298,10 +298,10 @@ ISR(TIMER2_COMPA_vect) {
     throttle_counter_right_motor = 0;                                   //Reset the CC_Speed_Left_Motor variable
     throttle_right_motor_memory = throttle_right_motor;                 //Load the next Left_Motor_Speed variable
     if (throttle_right_motor_memory < 0) {                              //If the Left_Motor_Speed_Prev is negative
-      PORTD |= 0b01000000;                                              //Set D6 low. Reverse  direction
-      throttle_left_motor_memory *= -1;                                 //Invert the Left_Motor_Speed_Prev variable
+      PORTD &= 0b10111111;                                              //Set D6 low. Reverse  direction
+      throttle_right_motor_memory *= -1;                                //Invert the Left_Motor_Speed_Prev variable
     }
-    else PORTD &= 0b10111111;                                           //Set output D6 high. Forward direction.
+    else PORTD |= 0b01000000;                                           //Set output D6 high. Forward direction.
   }
   else if (throttle_counter_right_motor == 1)PORTD |= 0b00001000;        //Set output D3 high to create a pulse for the stepper
   else if (throttle_counter_right_motor == 2)PORTD &= 0b11110111;        //Set output D3 low because the pulse only has to last for 20us
