@@ -71,10 +71,10 @@ void setup(){
   Wire.endTransmission();                                                   //End the transmission with the gyro 
 
   pinMode(2, OUTPUT);                                                       //Configure digital port 2 as output
-  pinMode(5, OUTPUT);                                                       //Configure digital port 3 as output
-  pinMode(3, OUTPUT);                                                       //Configure digital port 4 as output
-  pinMode(6, OUTPUT);                                                       //Configure digital port 5 as output
-  pinMode(13, OUTPUT);                                                      //Configure digital port 6 as output
+  pinMode(5, OUTPUT);                                                       //Configure digital port 5 as output
+  pinMode(3, OUTPUT);                                                       //Configure digital port 3 as output
+  pinMode(6, OUTPUT);                                                       //Configure digital port 6 as output
+  pinMode(13, OUTPUT);                                                      //Configure digital port 13 as output
 
 //  Serial.print("Calibrating gyro...");
 
