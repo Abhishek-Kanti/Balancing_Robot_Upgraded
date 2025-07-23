@@ -7,9 +7,9 @@ float acc_x, acc_y, acc_z;
 float acc_angle, calibration_angle;
 
 //Various settings
-float pid_p_gain = 8;                                       //Gain setting for the P-controller (15)
-float pid_i_gain = 1.5;                                      //Gain setting for the I-controller (1.5)
-float pid_d_gain = 3;                                       //Gain setting for the D-controller (30)
+float pid_p_gain = 11.0;                                       //Gain setting for the P-controller (15)
+float pid_i_gain = 0.7;                                      //Gain setting for the I-controller (1.5)
+float pid_d_gain = 4.0;                                       //Gain setting for the D-controller (30)
 float turning_speed = 30;                                    //Turning speed (20)
 float max_target_speed = 150;                                //Max target speed (100)
 
@@ -31,6 +31,14 @@ unsigned long loop_timer;
 float angle_gyro, angle_acc, angle, self_balance_pid_setpoint;
 float pid_error_temp, pid_i_mem, pid_setpoint, gyro_input, pid_output, pid_last_d_error;
 float pid_output_left, pid_output_right;
+
+#define m0x 4                       //motor driver 1 step pins. will be setting them in void setup for quater stepping.
+#define m1x 3
+#define m2x 2
+
+#define m0y 7                      //motor driver 2 step pins. will be setting them in void setup for quater stepping.
+#define m1y 8
+#define m2y 9
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Setup basic functions
@@ -70,12 +78,27 @@ void setup(){
   Wire.write(0x03);                                                         //Set the register bits as 00000011 (Set Digital Low Pass Filter to ~43Hz)
   Wire.endTransmission();                                                   //End the transmission with the gyro 
 
-  pinMode(2, OUTPUT);                                                       //Configure digital port 2 as output
-  pinMode(5, OUTPUT);                                                       //Configure digital port 3 as output
-  pinMode(3, OUTPUT);                                                       //Configure digital port 4 as output
-  pinMode(6, OUTPUT);                                                       //Configure digital port 5 as output
+  pinMode(5, OUTPUT);                                                       //Configure digital port 5 as output for dir pin
+  pinMode(6, OUTPUT);                                                       //Configure digital port 6 as output for step pin
+  pinMode(10, OUTPUT);                                                       //Configure digital port 10 as output for dir pin
+  pinMode(11, OUTPUT);                                                       //Configure digital port 11 as output for step pin
   pinMode(13, OUTPUT);                                                      //Configure digital port 6 as output
 
+  pinMode(m0x, OUTPUT);
+  pinMode(m1x, OUTPUT);
+  pinMode(m2x, OUTPUT);
+
+  pinMode(m0y, OUTPUT);
+  pinMode(m1y, OUTPUT);
+  pinMode(m2y, OUTPUT);
+
+  digitalWrite(m0x, 0);
+  digitalWrite(m1x, 1);
+  digitalWrite(m2x, 0);
+
+  digitalWrite(m0y, 0);
+  digitalWrite(m1y, 1);
+  digitalWrite(m2y, 0);
 //  Serial.print("Calibrating gyro...");
 
   for(receive_counter = 0; receive_counter < 500; receive_counter++){       //Create 500 loops
@@ -211,8 +234,8 @@ void loop() {
   }
 
   if(received_byte & B00000010){                        //left
-    pid_output_left += turning_speed;
-    pid_output_right -= turning_speed;
+    pid_output_left -= turning_speed;
+    pid_output_right += turning_speed;
   }
 
   if(received_byte & B00000100){                        //forward
@@ -288,8 +311,8 @@ ISR(TIMER2_COMPA_vect) {
     }
     else PORTD |= 0b00100000;                                           //Set output D5 high. Forward direction.
   }
-  else if (throttle_counter_left_motor == 1)PORTD |= 0b00000100;        //Set output D2 high to create a pulse for the stepper
-  else if (throttle_counter_left_motor == 2)PORTD &= 0b11111011;        //Set output D2 low because the pulse only has to last for 20us
+  else if (throttle_counter_left_motor == 1)PORTD |= 0b01000000;        //Set output D6 high to create a pulse for the stepper
+  else if (throttle_counter_left_motor == 2)PORTD &= 0b10111111;        //Set output D6 low because the pulse only has to last for 20us
 
 
   //Right motor pulses
@@ -298,11 +321,11 @@ ISR(TIMER2_COMPA_vect) {
     throttle_counter_right_motor = 0;                                   //Reset the CC_Speed_Left_Motor variable
     throttle_right_motor_memory = throttle_right_motor;                 //Load the next Left_Motor_Speed variable
     if (throttle_right_motor_memory < 0) {                              //If the Left_Motor_Speed_Prev is negative
-      PORTD &= 0b10111111;                                              //Set D6 low. Reverse  direction
+      PORTB &= 0b11111011;                                              //Set D10 low. Reverse  direction
       throttle_right_motor_memory *= -1;                                //Invert the Left_Motor_Speed_Prev variable
     }
-    else PORTD |= 0b01000000;                                           //Set output D6 high. Forward direction.
+    else PORTB |= 0b00000100;                                           //Set output D10 high. Forward direction.
   }
-  else if (throttle_counter_right_motor == 1)PORTD |= 0b00001000;        //Set output D3 high to create a pulse for the stepper
-  else if (throttle_counter_right_motor == 2)PORTD &= 0b11110111;        //Set output D3 low because the pulse only has to last for 20us
+  else if (throttle_counter_right_motor == 1)PORTB |= 0b00001000;        //Set output D11 high to create a pulse for the stepper
+  else if (throttle_counter_right_motor == 2)PORTB &= 0b11110111;        //Set output D11 low because the pulse only has to last for 20us
 }//End of timer routine
